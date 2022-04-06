@@ -1,14 +1,198 @@
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit import IBMQ, Aer, transpile, assemble
-from qiskit.visualization import plot_histogram, plot_bloch_multivector, array_to_latex
-from qiskit.extensions import Initialize
-from qiskit.quantum_info import random_statevector
 import numpy as np
+import math
+import itertools
+from matplotlib import pyplot as plt
+from random import random, sample
+
 from whole_process import tfd_generator
-from qiskit.quantum_info import random_statevector, state_fidelity, Statevector
-from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, Aer, execute
-from qiskit.quantum_info import random_statevector, state_fidelity, Statevector
+
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, IBMQ, Aer, transpile, assemble, execute
+from qiskit.visualization import plot_histogram, plot_bloch_multivector, array_to_latex
 from qiskit.extensions import Initialize, UnitaryGate
+from qiskit.quantum_info import random_statevector, state_fidelity, Statevector
+
+# generate random angles, needed to initialize the problem
+def random_angles(n):
+    angles = []
+    for i in range(n):
+        angles.append(2*math.pi*random())
+    return angles
+
+# we define functions to convert between the 01 notation (string) and
+# -+ notation (array)
+def from_01_to_pm(string):
+    return np.ones(num_assets) - 2 * np.array(list(map(int,i)))
+
+def from_pm_to_01(array):
+    str = ''
+    for el in array:
+        if el == 1:
+            str = str + '0'
+        elif el == -1:
+            str = str + '1'
+    return str
+
+class ThetaError(Exception):
+    """Erorr raised whenever the angles provided to the variational circuit
+    don't match with the circuit shape.
+    """
+
+class VariationalCircuit(object):
+    """Implement a generic variational circuit that can then be used with a
+    variational optimization algorithm.
+    """
+
+    def _circuitBuilder(self):
+        """ The way the circuit is build depends on the particular
+        circuit structure. theta should be a list of angles.
+        """
+        pass
+
+    def __init__(self, theta):
+        """Initialize a new VariationalCircuit, with angles as parameters.
+        """
+        self.theta = theta
+        self.circuit = self._circuitBuilder(theta)
+
+    def update_theta(self, theta):
+        if len(theta) == len(self.theta):
+            self.circuit = self._circuitBuilder(theta)
+            self.theta = theta
+        else:
+            print(f"theta should be a list of {len(theta)} angles.")
+            raise ThetaError
+
+class QAOA_TFD(VariationalCircuit):
+    """Implement the variational circuit from https://arxiv.org/abs/2112.02068.
+    The circuit is made by three types of blocks: a gate preparing the infinite
+    temperature TFD, time evolution by a Hamiltonian whose ground state is the
+    infinite temperature TFD, and time evolution by a Hamiltonian whose ground
+    state is the zero temperature TFD. The amount of time evolution we perform
+    at each step corresponds to the angles.
+    """
+    def _prepare_infinite_temp(n):
+        # first we make a circuit with twice the number of qubits
+        circuit = QuantumCircuit(2*n)
+        # we add the R_XX gates
+        for i in range(n):
+            circuit.rxx(np.pi/2, i, i+n)
+        # we add the R_Z gates
+        for i in range(n):
+            circuit.rz(np.pi/4, i)
+            circuit.rz(np.pi/4, i+n)
+        # we turn the circuit into a gate and return it
+        return circuit.to_gate(label="UInf")
+
+    # To build the circuit we need the following blocks
+    def _U_infinite_temp(n, theta):
+        # first we make a circuit with twice the number of qubits
+        circuit = QuantumCircuit(2*n)
+        # we add the R_XX gates
+        for i in range(n):
+            circuit.rxx(theta, i, i+n)
+        # we add the R_Z gates
+        for i in range(n):
+            circuit.rz(theta, i)
+            circuit.rz(theta, i+n)
+        # we turn the circuit into a gate and return it
+        return circuit.to_gate(label="UInf")
+
+    def _U_zero_temp(n, theta):
+        # first we make a circuit with twice the number of qubits
+        circuit = QuantumCircuit(2*n)
+        # we add the R_XX gates
+        for i in range(n):
+            circuit.rxx(theta, i, i+1)
+            circuit.rxx(theta, i+n, i+1+n)
+        # we add the R_Z gates
+        for i in range(n):
+            circuit.rz(theta, i)
+            circuit.rz(theta, i+n)
+        # we turn the circuit into a gate and return it
+        return circuit.to_gate(label="U0")
+
+    def __init__(self, n, d, theta):
+        """Takes a list of angles, theta, and (n,d) as args, where n is the
+        number of qubits (in one copy of the system) and d is
+        the depth of the circuit.
+        """
+        try:
+            self.n = n
+            self.d = d
+        except (ValueError, TypeError):
+            print("You should input two integers, n and d, where n is the \
+                    number of qubits and d is the depth of the circuit.")
+        super().__init__(theta)
+
+    def _circuitBuilder(self, theta):
+        # make a quantum circuit with 2n qubits
+        circuit = QuantumCircuit(2*self.n)
+        # first we prepare the infinite temperature TFD. This can be done
+        circuit.append(QAOA_TFD._prepare_infinite_temp(self.n), range(2*self.n))
+        # add d layers of alternating time evolutions
+        for i in range(self.d):
+            circuit.append(QAOA_TFD._U_infinite_temp(self.n, theta[2*i]), range(2*self.n))
+            circuit.append(QAOA_TFD._U_zero_temp(self.n, theta[2*i+1]), range(2*self.n))
+        return circuit
+
+class StateCooker(object):
+    """Implement a quantum algorithm that prepares the target state,
+    working with qiskit.
+    """
+
+    def __init__(self, var_circuit, target_state, backend, optimizer, shots=1024):
+        """As input, we need the variational circuit, which should prepare the
+        state, the target state, a backend to run the simulation and
+        an optimizer. Shots sets how many times we run the circuit to estimate
+        the state.
+        """
+        self.var_circuit = var_circuit
+        self.target_state = target_state
+        self.simulator = Aer.get_backend(backend)
+        # the optimizer should be a function that takes only two arguments:
+        self.optimizer = optimizer
+        self.shots = shots
+        # everytime we run the circuit we add a new element to results:
+        # the angles used is the key, the fidelity the value
+        self.results = {}
+
+    def run(self, theta=[None]):
+        """Runs the circuit and return the fidelity between the output state
+        and the target state.
+        """
+        if list(theta) != [None]:
+            self.var_circuit.update_theta(theta)
+        circuit = self.var_circuit.circuit
+        # we add a layer to the circuit needed to save the final state
+        circuit.save_statevector()
+        # we transpile the circuit with the chosen backend
+        circuit = transpile(circuit, self.simulator)
+        # we run the circuit
+        out_state = self.simulator.run(circuit,shots=self.shots).result().get_statevector(circuit)
+        return state_fidelity(out_state, self.target_state)
+
+    def optimize(self):
+        """Use the given optimizer to find the value of theta which gives an
+        out_state as close as possible to the target_state. Everytime you call
+        optimize any previous result is erased. Notice that the optimal value in
+        general is different from the value of the last call, which you get by
+        using get_result."
+        """
+        self.results = {}
+        result = self.optimizer(self.run, self.var_circuit.theta)
+        return result
+
+    def get_result(self, n=1):
+        """Returns the last result, or the n-th last result."""
+        key = list(self.results.keys())[-n]
+        return self.results[key]
+
+    def plot(self):
+        """Plot the fidelity as we optimize the angles.
+        """
+        fig = plt.figure(figsize=(10,10))
+        plt.plot(self.results, label="Fidelity")
+        plt.show()
 
 def infinite_temp(framework):
     qreg = QuantumRegister(6)
@@ -169,10 +353,19 @@ class tfd_gen:
             # finite_temp(framework, temp)
             print("TBD - Finite temp.")
 
-
+"""
 g = tfd_gen()
 fid = {}
 for temp in [None, 0]:
     fid[temp] = g.run('sim', temp)
 print('Fidelity with tfd generated via mathematica:\n** {temp: fid}\n** None=infty\n', fid)
+"""
 
+qaoa = QAOA_TFD(3, 0, 0)
+tfd_ref = tfd_generator().generate_tfd(0)  # Very large beta.
+
+# for the optimization we use minimize with the following args
+optimizer = lambda f,theta: minimize(f, theta, method='Powell',options={'return_all':True}, tol=1e-3)
+cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
+
+print(cooker.run())
