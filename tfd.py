@@ -3,6 +3,7 @@ import math
 import itertools
 from matplotlib import pyplot as plt
 from random import random, sample
+from scipy.optimize import minimize
 
 from whole_process import tfd_generator
 
@@ -101,7 +102,7 @@ class QAOA_TFD(VariationalCircuit):
         # first we make a circuit with twice the number of qubits
         circuit = QuantumCircuit(2*n)
         # we add the R_XX gates
-        for i in range(n):
+        for i in range(n-1):
             circuit.rxx(theta, i, i+1)
             circuit.rxx(theta, i+n, i+1+n)
         # we add the R_Z gates
@@ -157,7 +158,7 @@ class StateCooker(object):
         self.results = {}
 
     def run(self, theta=[None]):
-        """Runs the circuit and return the fidelity between the output state
+        """Runs the circuit and return the 1-fidelity between the output state
         and the target state.
         """
         if list(theta) != [None]:
@@ -169,7 +170,8 @@ class StateCooker(object):
         circuit = transpile(circuit, self.simulator)
         # we run the circuit
         out_state = self.simulator.run(circuit,shots=self.shots).result().get_statevector(circuit)
-        return state_fidelity(out_state, self.target_state)
+        # later we want to minimize, so we need to take 1-F
+        return 1-state_fidelity(out_state, self.target_state)
 
     def optimize(self):
         """Use the given optimizer to find the value of theta which gives an
@@ -361,11 +363,17 @@ for temp in [None, 0]:
 print('Fidelity with tfd generated via mathematica:\n** {temp: fid}\n** None=infty\n', fid)
 """
 
-qaoa = QAOA_TFD(3, 0, 0)
-tfd_ref = tfd_generator().generate_tfd(0)  # Very large beta.
-
+# let's consider a circuit with one layer
+d = 1
+# the numbe of angles is twice the depth of the circuit
+angles = random_angles(2*d)
+# we build the QAOA circuit
+qaoa = QAOA_TFD(3, d, angles)
+# the reference state is
+tfd_ref = tfd_generator().generate_tfd(0)
 # for the optimization we use minimize with the following args
 optimizer = lambda f,theta: minimize(f, theta, method='Powell',options={'return_all':True}, tol=1e-3)
+# finally we can define the optimization algorithm
 cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
-
-print(cooker.run())
+result = cooker.optimize()
+print(result)
