@@ -19,10 +19,12 @@ def random_angles(n):
         angles.append(2*math.pi*random())
     return angles
 
+
 # we define functions to convert between the 01 notation (string) and
 # -+ notation (array)
 def from_01_to_pm(string):
     return np.ones(num_assets) - 2 * np.array(list(map(int,i)))
+
 
 def from_pm_to_01(array):
     str = ''
@@ -33,10 +35,12 @@ def from_pm_to_01(array):
             str = str + '1'
     return str
 
+
 class ThetaError(Exception):
-    """Erorr raised whenever the angles provided to the variational circuit
+    """Error raised whenever the angles provided to the variational circuit
     don't match with the circuit shape.
     """
+
 
 class VariationalCircuit(object):
     """Implement a generic variational circuit that can then be used with a
@@ -192,11 +196,12 @@ class StateCooker(object):
     def plot(self):
         """Plot the fidelity as we optimize the angles.
         """
-        fig = plt.figure(figsize=(10,10))
+        fig = plt.figure(figsize=(10, 10))
         plt.plot(self.results, label="Fidelity")
         plt.show()
 
-def infinite_temp(framework):
+
+def infinite_temp(framework: str):
     qreg = QuantumRegister(6)
     creg = ClassicalRegister(6)
     qc = QuantumCircuit(qreg, creg)
@@ -241,7 +246,7 @@ def infinite_temp(framework):
         return state_fidelity(st, tfd_ref)
 
 
-def zero_temp(framework):
+def zero_temp(framework: str):
     qreg = QuantumRegister(6)
     creg = ClassicalRegister(6)
     qc = QuantumCircuit(qreg, creg)
@@ -372,7 +377,7 @@ qaoa = QAOA_TFD(3, d, angles)
 # the reference state is
 tfd_ref = tfd_generator().generate_tfd(0)
 # for the optimization we use minimize with the following args
-optimizer = lambda f,theta: minimize(f, theta, method='Powell',options={'return_all':True}, tol=1e-3)
+optimizer = lambda f, theta: minimize(f, theta, method='Powell', options={'return_all': True}, tol=1e-3)
 # finally we can define the optimization algorithm
 cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
 result = cooker.optimize()
