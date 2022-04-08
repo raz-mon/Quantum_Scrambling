@@ -95,10 +95,8 @@ class QAOA_TFD(VariationalCircuit):
         # we add the R_XX gates
         for i in range(n):
             circuit.rxx(theta, i, i+n)
-        # we add the R_Z gates
         for i in range(n):
-            circuit.rz(theta, i)
-            circuit.rz(theta, i+n)
+            circuit.rzz(theta, i, i+n)
         # we turn the circuit into a gate and return it
         return circuit.to_gate(label="UInf")
 
@@ -136,8 +134,8 @@ class QAOA_TFD(VariationalCircuit):
         circuit.append(QAOA_TFD._prepare_infinite_temp(self.n), range(2*self.n))
         # add d layers of alternating time evolutions
         for i in range(self.d):
-            circuit.append(QAOA_TFD._U_infinite_temp(self.n, theta[2*i]), range(2*self.n))
-            circuit.append(QAOA_TFD._U_zero_temp(self.n, theta[2*i+1]), range(2*self.n))
+            circuit.append(QAOA_TFD._U_zero_temp(self.n, theta[2*i]), range(2*self.n))
+            circuit.append(QAOA_TFD._U_infinite_temp(self.n, theta[2*i+1]), range(2*self.n))
         return circuit
 
 class StateCooker(object):
@@ -369,7 +367,7 @@ print('Fidelity with tfd generated via mathematica:\n** {temp: fid}\n** None=inf
 """
 
 # let's consider a circuit with one layer
-d = 1
+d = 2
 # the numbe of angles is twice the depth of the circuit
 angles = random_angles(2*d)
 # we build the QAOA circuit
@@ -377,7 +375,12 @@ qaoa = QAOA_TFD(3, d, angles)
 # the reference state is
 tfd_ref = tfd_generator().generate_tfd(0)
 # for the optimization we use minimize with the following args
+<<<<<<< HEAD
+#optimizer = lambda f,theta: minimize(f, theta, method='Powell',options={'return_all':True}, tol=1e-3)
+optimizer = lambda f,theta: minimize(f, theta, method='COBYLA', tol=1e-3)
+=======
 optimizer = lambda f, theta: minimize(f, theta, method='Powell', options={'return_all': True}, tol=1e-3)
+>>>>>>> c7592a0816a26a476a21b33215d50df8bd1475ad
 # finally we can define the optimization algorithm
 cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
 result = cooker.optimize()
