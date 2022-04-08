@@ -90,28 +90,28 @@ class QAOA_TFD(VariationalCircuit):
         return circuit.to_gate(label="UInf")
 
     # To build the circuit we need the following blocks
-    def _U_infinite_temp(n, theta):
+    def _U_infinite_temp(n, alpha1, alpha2):
         # first we make a circuit with twice the number of qubits
         circuit = QuantumCircuit(2*n)
         # we add the R_XX gates
         for i in range(n):
-            circuit.rxx(theta, i, i+n)
+            circuit.rxx(alpha1, i, i+n)
         for i in range(n):
-            circuit.rzz(theta, i, i+n)
+            circuit.rzz(alpha2, i, i+n)
         # we turn the circuit into a gate and return it
         return circuit.to_gate(label="UInf")
 
-    def _U_zero_temp(n, theta):
+    def _U_zero_temp(n, gamma1, gamma2):
         # first we make a circuit with twice the number of qubits
         circuit = QuantumCircuit(2*n)
         # we add the R_XX gates
         for i in range(n-1):
-            circuit.rxx(theta, i, i+1)
-            circuit.rxx(theta, i+n, i+1+n)
+            circuit.rxx(gamma2, i, i+1)
+            circuit.rxx(gamma2, i+n, i+1+n)
         # we add the R_Z gates
         for i in range(n):
-            circuit.rz(theta, i)
-            circuit.rz(theta, i+n)
+            circuit.rz(gamma1, i)
+            circuit.rz(gamma1, i+n)
         # we turn the circuit into a gate and return it
         return circuit.to_gate(label="U0")
 
@@ -134,9 +134,10 @@ class QAOA_TFD(VariationalCircuit):
         # first we prepare the infinite temperature TFD. This can be done
         circuit.append(QAOA_TFD._prepare_infinite_temp(self.n), range(2*self.n))
         # add d layers of alternating time evolutions
+        # theta = (alpha1, alpha2, gamma1, gamma2)
         for i in range(self.d):
-            circuit.append(QAOA_TFD._U_zero_temp(self.n, theta[2*i]), range(2*self.n))
-            circuit.append(QAOA_TFD._U_infinite_temp(self.n, theta[2*i+1]), range(2*self.n))
+            circuit.append(QAOA_TFD._U_zero_temp(self.n, theta[4*i], theta[4*i+1]), range(2*self.n))
+            circuit.append(QAOA_TFD._U_infinite_temp(self.n, theta[4*i+2],theta[4*i+3]), range(2*self.n))
         return circuit
 
 class StateCooker(object):
@@ -368,21 +369,25 @@ print('Fidelity with tfd generated via mathematica:\n** {temp: fid}\n** None=inf
 """
 
 # let's consider a circuit with one layer
-d = 2
+d = 1
 # the numbe of angles is twice the depth of the circuit
-angles = random_angles(2*d)
+angles = random_angles(4*d)
 # we build the QAOA circuit
 qaoa = QAOA_TFD(3, d, angles)
 # the reference state is
-tfd_ref = tfd_generator().generate_tfd(0)
+tfd_ref = tfd_generator().generate_tfd(1)
 # for the optimization we use minimize with the following args
-<<<<<<< HEAD
 #optimizer = lambda f,theta: minimize(f, theta, method='Powell',options={'return_all':True}, tol=1e-3)
-optimizer = lambda f,theta: minimize(f, theta, method='COBYLA', tol=1e-3)
-=======
-optimizer = lambda f, theta: minimize(f, theta, method='Powell', options={'return_all': True}, tol=1e-3)
->>>>>>> c7592a0816a26a476a21b33215d50df8bd1475ad
+optimizer = lambda f,theta: minimize(f, theta, method='COBYLA', tol=1e-2)
 # finally we can define the optimization algorithm
+cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
+result = cooker.optimize()
+
+# let's consider a circuit with two layer
+d = 2
+angles = np.append(result.x, random_angles(4*d))
+# we build the QAOA circuit
+qaoa = QAOA_TFD(3, d, angles)
 cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
 result = cooker.optimize()
 print(result)
