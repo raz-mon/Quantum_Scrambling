@@ -161,7 +161,7 @@ class StateCooker(object):
         # everytime we run the circuit we add a new element to results:
         # the angles used is the key, the fidelity the value
         self.results = {}
-        self.last_thetas = [5.6388085, 3.04771788, 4.7027956, 5.31299131, 0, 0, 0, 0]
+        self.last_thetas = [3.00432495, 6.28315478, 4.70740837, 6.32998926, 0, 0, 0, 0]
 
     def run(self, theta=[None]):
         """Runs the circuit and return the 1-fidelity between the output state
@@ -389,20 +389,35 @@ print('Fidelity with tfd generated via mathematica:\n** {temp: fid}\n** None=inf
 
 # let's consider a circuit with one layer
 d = 2
-# the numbe of angles is twice the depth of the circuit
+# the number of angles is twice the depth of the circuit
 angles = random_angles(4*d)
+# angles = np.zeros(8)
 # we build the QAOA circuit
 qaoa = QAOA_TFD(3, d, angles)
 # the reference state is
 tfd_ref = tfd_generator().generate_tfd(1)
 # for the optimization we use minimize with the following args
 #optimizer = lambda f,theta: minimize(f, theta, method='Powell',options={'return_all':True}, tol=1e-3)
-optimizer = lambda f, theta: minimize(f, theta, method='COBYLA', tol=1e-2)
+optimizer = lambda f, theta: minimize(f, theta, method='COBYLA', tol=1e-4, options={'maxiter': 200})
 # finally we can define the optimization algorithm
 cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
 result = cooker.optimize_1_layer()
 print(result)
 print(cooker.run_1_layer([0, 0, 0, 0]))
+
+res2 = cooker.optimize()
+print('res: \n', res2)
+
+
+d=3
+angles = random_angles(4*d)
+qaoa_2 = QAOA_TFD(3, d, angles)
+cooker_2 = StateCooker(qaoa_2, tfd_ref, 'aer_simulator', optimizer)
+res = cooker_2.optimize()
+print(res)
+
+
+
 """
 # let's consider a circuit with two layer
 d = 2

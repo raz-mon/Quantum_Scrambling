@@ -57,16 +57,32 @@ class tfd_generator(object):
             return np.kron(pz, np.kron(id2, pz))
 
 
+    def outpxipxi(self, i):
+        """
+
+        :param i:
+        :return:
+        """
+        if i == 0:
+            return np.kron(id2, np.kron(px, px))
+        elif i == 1:
+            return np.kron(px, np.kron(px, id2))
+        else:
+            return np.kron(px, np.kron(id2, px))
+
+
     def ising_ham(self, g, h):
         """ Calculates the Ising Hamiltonian of 3 qubits, given g and h"""
         s = 0
         for i in range(3):
-            s -= self.outpzipzip1(i) + g * self.pxi(i) + h * self.pzi(i)
+            # s -= self.outpzipzip1(i) + g * self.pxi(i) + h * self.pzi(i)
+            s = self.outpxipxi(i) + g * self.pzi(i)
         return s
 
     def calc_evals_evecs(self):
         #print('ising ham: ', self.ising_ham(-1.05, 0.5), '\n')
-        return np.linalg.eigh(self.ising_ham(-1.05, 0.5))
+        # return np.linalg.eigh(self.ising_ham(-1.05, 0.5))
+        return np.linalg.eigh(self.ising_ham(-1, 0))
 
     def chop(self, expr, max=1*pow(10, -10)):
         return [i if i > max else 0 for i in expr]
