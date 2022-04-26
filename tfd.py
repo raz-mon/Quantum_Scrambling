@@ -27,7 +27,7 @@ def from_01_to_pm(string):
     return np.ones(num_assets) - 2 * np.array(list(map(int,i)))
 """
 
-
+"""
 def from_pm_to_01(array):
     str = ''
     for el in array:
@@ -35,7 +35,7 @@ def from_pm_to_01(array):
             str = str + '0'
         elif el == -1:
             str = str + '1'
-    return str
+    return str"""
 
 
 class ThetaError(Exception):
@@ -379,55 +379,7 @@ class tfd_gen:
             # finite_temp(framework, temp)
             print("TBD - Finite temp.")
 
-"""
-g = tfd_gen()
-fid = {}
-for temp in [None, 0]:
-    fid[temp] = g.run('sim', temp)
-print('Fidelity with tfd generated via mathematica:\n** {temp: fid}\n** None=infty\n', fid)
-"""
 
-# let's consider a circuit with one layer
-d = 2
-# the number of angles is twice the depth of the circuit
-angles = random_angles(4*d)
-# angles = np.zeros(8)
-# we build the QAOA circuit
-qaoa = QAOA_TFD(3, d, angles)
-# the reference state is
-tfd_ref = tfd_generator().generate_tfd(1)
-# for the optimization we use minimize with the following args
-#optimizer = lambda f,theta: minimize(f, theta, method='Powell',options={'return_all':True}, tol=1e-3)
-optimizer = lambda f, theta: minimize(f, theta, method='COBYLA', tol=1e-4, options={'maxiter': 200})
-# finally we can define the optimization algorithm
-cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
-result = cooker.optimize_1_layer()
-print(result)
-print(cooker.run_1_layer([0, 0, 0, 0]))
-
-res2 = cooker.optimize()
-print('res: \n', res2)
-
-
-d=3
-angles = random_angles(4*d)
-qaoa_2 = QAOA_TFD(3, d, angles)
-cooker_2 = StateCooker(qaoa_2, tfd_ref, 'aer_simulator', optimizer)
-res = cooker_2.optimize()
-print(res)
-
-
-
-"""
-# let's consider a circuit with two layer
-d = 2
-angles = np.append(result.x, random_angles(4*d))
-# we build the QAOA circuit
-qaoa = QAOA_TFD(3, d, angles)
-cooker = StateCooker(qaoa, tfd_ref, 'aer_simulator', optimizer)
-result = cooker.optimize()
-print(result)
-"""
 
 
 
