@@ -9,10 +9,14 @@ from qiskit.quantum_info import state_fidelity
 
 # generate random angles, needed to initialize the problem
 def random_angles(n):
+    """
+    # Old implementation:
     angles = []
     for i in range(n):
         angles.append(2*math.pi*random())
     return angles
+    """
+    return list(np.random.uniform(0, 2*np.pi, n))
 
 class ThetaError(Exception):
     """Error raised whenever the angles provided to the variational circuit
@@ -139,7 +143,7 @@ class StateCooker(object):
         self.last_thetas = [3.00432495, 6.28315478, 4.70740837, 6.32998926, 0, 0, 0, 0]
 
     def run(self, theta=[None]):
-        """Runs the circuit and return the 1-fidelity between the output state
+        """Runs the circuit and return 1-fidelity between the output state
         and the target state.
         """
         if list(theta) != [None]:
