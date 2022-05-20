@@ -2,7 +2,7 @@ import numpy as np
 import math
 from matplotlib import pyplot as plt
 from random import random, sample
-#from scipy.optimize import minimize
+from scipy.optimize import minimize
 
 from qiskit import QuantumCircuit, Aer, transpile
 from qiskit.quantum_info import state_fidelity
@@ -28,7 +28,7 @@ class VariationalCircuit(object):
     variational optimization algorithm.
     """
 
-    def _circuitBuilder(self):
+    def _circuitBuilder(self, theta):
         """ The way the circuit is build depends on the particular
         circuit structure. theta should be a list of angles.
         """
@@ -140,6 +140,9 @@ class StateCooker(object):
         # everytime we run the circuit we add a new element to results:
         # the angles used is the key, the fidelity the value
         self.results = {}
+
+        # 8 thetas (corresponds to 2 layers - d=2), first 4 are initialized to be what returns from the 1-layer
+        # optimization.
         self.last_thetas = [3.00432495, 6.28315478, 4.70740837, 6.32998926, 0, 0, 0, 0]
 
     def run(self, theta=[None]):
