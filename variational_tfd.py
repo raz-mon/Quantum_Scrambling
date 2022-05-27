@@ -200,15 +200,3 @@ class StateCooker(object):
         fig = plt.figure(figsize=(10, 10))
         plt.plot(self.results, label="Fidelity")
         plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
