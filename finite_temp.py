@@ -260,6 +260,7 @@ def run_experiment(n, beta):
     @param n: The number of pairs in the TFD state.
     @param beta: 1/T
     """
+    print(f'Running experiment with n={n}, beta={beta}')
     H = get_H(n)
     tmax = 2
     ts = np.linspace(0, tmax, 100)
@@ -267,12 +268,14 @@ def run_experiment(n, beta):
     pred = find_prediction(n, H, beta)
     plt.plot(ts, np.array(probs_swap))
     plt.hlines(pred, 0, tmax)
+    plt.show()
 
 # n=4, beta=0
 run_experiment(n=4, beta=0)
 
 """### Experiment with $\beta \neq 0$"""
 def run_experiment_2(n, beta):
+    print(f'Running experiment_2 with n={n}, beta={beta}')
     H = get_H(n)
     beta = 1
     tmax = 2*beta
@@ -281,6 +284,7 @@ def run_experiment_2(n, beta):
     pred = find_prediction(n, H, beta)
     plt.plot(ts, np.array(probs_swap))
     plt.hlines(pred, 0, tmax)
+    plt.show()
 
 # n=4, beta=1
 run_experiment_2(4, 1)
