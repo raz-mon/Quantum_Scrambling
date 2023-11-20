@@ -273,6 +273,7 @@ run_experiment(n=4, beta=0)
 
 """### Experiment with $\beta \neq 0$"""
 def run_experiment_2(n, beta):
+    H = get_H(n)
     beta = 1
     tmax = 2*beta
     ts = np.linspace(0, tmax, 100)
