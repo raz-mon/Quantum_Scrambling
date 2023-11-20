@@ -233,12 +233,12 @@ def check_tfd_for_beta_0():
       transposition = [i if i%2==0 else 2*n-i for i in range(n)] + [n] + [n+1+i if i%2==0 else n-1-i for i in range(n-1)]
     tfd_correct  = tfd_correct.transpose(transposition)
     tfd_correct  = tfd_correct.reshape(2**(2*n))
-    np.abs(tfd-tfd_correct).sum()
+    print(np.abs(tfd-tfd_correct).sum())
 
     psi = find_psi_after_swap(n, H, beta)
     rho = rho = np.outer(psi, psi)
     rho_A =partial_trace(rho, [1, 2*(n+1)])
-    np.trace(rho_A@rho_A)
+    print(np.trace(rho_A@rho_A))
 
     m = n-1
     psi  = bell
@@ -253,7 +253,7 @@ def check_tfd_for_beta_0():
     psi  = psi.reshape(2**(2*m))
     psi = np.kron(bell, psi)
     psi = np.kron(psi, bell)
-    np.abs(rho_A - np.outer(psi, psi)).sum()
+    print(np.abs(rho_A - np.outer(psi, psi)).sum())
 
 def run_experiment(n, beta):
     """Runs the above --
