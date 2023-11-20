@@ -17,7 +17,7 @@ Original file is located at
 #!pip install scikit-rmt
 
 import qiskit.quantum_info as qi
-from qiskit.extensions.quantum_initializer.initializer import initialize
+#from qiskit.extensions.quantum_initializer.initializer import initialize
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 # from qiskit import IBMQ, Aer, transpile, assemble, execute    # Old libraries for Aer, new below
 from qiskit import IBMQ, transpile, assemble, execute
