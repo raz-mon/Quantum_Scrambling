@@ -288,7 +288,6 @@ def run_experiment_2(n, beta):
 
 # n=4, beta=1
 run_experiment_2(4, 1)
-print("2")
 
 # n=4, beta=10
 run_experiment(4, 10)
